@@ -77,7 +77,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved)
 }
 
 
-JNIEXPORT jint JNICALL Java_org_jiggawatt_giffle_Giffle_Init(JNIEnv *ioEnv, jobject ioThis, jstring gifName,
+JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Init(JNIEnv *ioEnv, jobject ioThis, jstring gifName,
                                                              jint w, jint h, jint numColors, jint quality, jint frameDelay)
 {
 	const char *str;
@@ -135,7 +135,7 @@ JNIEXPORT jint JNICALL Java_org_jiggawatt_giffle_Giffle_Init(JNIEnv *ioEnv, jobj
 }
 
 
-JNIEXPORT void JNICALL Java_org_jiggawatt_giffle_Giffle_Close(JNIEnv *ioEnv, jobject ioThis)
+JNIEXPORT void JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Close(JNIEnv *ioEnv, jobject ioThis)
 {
 	if (data32bpp)
 	{
@@ -163,7 +163,7 @@ JNIEXPORT void JNICALL Java_org_jiggawatt_giffle_Giffle_Close(JNIEnv *ioEnv, job
 
 
 
-JNIEXPORT jint JNICALL Java_org_jiggawatt_giffle_Giffle_AddFrame(JNIEnv *ioEnv, jobject ioThis, jintArray inArray)
+JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_AddFrame(JNIEnv *ioEnv, jobject ioThis, jintArray inArray)
 {
 	ioEnv->GetIntArrayRegion(inArray, (jint)0, (jint)(inDIB.width * inDIB.height), (jint*)(inDIB.bits));
 
@@ -925,7 +925,7 @@ void NeuQuant::learn()
 		if (rad) alterneigh(rad,j,b,g,r);   /* alter neighbours */
 
 		p += step;
-		if (p >= (unsigned int *)lim) p -= lengthcount;
+		if (p >= (unsigned int *)lim) p -= lengthcount/4;
 
 		i++;
 		if (i%delta == 0) {

@@ -96,11 +96,11 @@ public class Giffle {
      * @param name			File Name
      * @param width
      * @param height
-     * @param drawableList	Drawable Resrouce R.drawable.* File List
+     * @param BitmapList	Bitmap Resrouce
      * @param delay
      * @return
      */
-    public boolean encode(final Context context, final String name, final int width, final int height, final int[] drawableList, final int delay) {
+    public boolean encode(final Context context, final String name, final int width, final int height, final Bitmap[] list, final int delay) {
 
         int state;
         int[] pixels = new int[width * height];
@@ -111,15 +111,11 @@ public class Giffle {
             return false;
         }
 
-        for (int drawable : drawableList) {
-            Bitmap bitmap = null;
-            bitmap = BitmapFactory.decodeResource(context.getResources(), drawable);
-            if (width < bitmap.getWidth() || height < bitmap.getHeight()) {
-                bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
-            }
-            bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
+        for (Bitmap bmp : list) {
+
+            bmp.getPixels(pixels, 0, width, 0, 0, width, height);
             AddFrame(pixels);
-            bitmap.recycle();
+//            bmp.recycle();
         }
         Close();
 
