@@ -26,7 +26,7 @@ public class Giffle {
      * @param pixels
      * @return
      */
-    public native int AddFrame(int[] pixels);
+    public native int AddFrame(int[] pixels, boolean isFirst);
 
     /**
      * Gifflen Init
@@ -67,7 +67,7 @@ public class Giffle {
         }
 
         Iterator<File> ite =  fileList.iterator();
-
+        boolean isFirst = true;
         while (ite.hasNext()) {
             Bitmap bitmap = null;
             try {
@@ -81,7 +81,8 @@ public class Giffle {
                 bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
             }
             bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
-            AddFrame(pixels);
+            AddFrame(pixels, isFirst);
+            isFirst = false;
             bitmap.recycle();
         }
 
@@ -111,10 +112,11 @@ public class Giffle {
             return false;
         }
 
+        boolean isFirst = true;
         for (Bitmap bmp : list) {
-
             bmp.getPixels(pixels, 0, width, 0, 0, width, height);
-            AddFrame(pixels);
+            AddFrame(pixels, isFirst);
+            isFirst = false;
 //            bmp.recycle();
         }
         Close();

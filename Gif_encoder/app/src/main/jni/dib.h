@@ -18,6 +18,7 @@ class DIB
 	bool allocatedMemory;
 	unsigned char *bits;
 	unsigned char *palette;
+	bool *usedEntry;
 
 	DIB()
 	{

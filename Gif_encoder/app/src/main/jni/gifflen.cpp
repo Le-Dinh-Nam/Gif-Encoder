@@ -49,6 +49,7 @@ JavaVM *gJavaVM;
 static char s[128];
 unsigned int netsize;
 FILE *pGif = NULL;
+bool hasAlpha = false;
 
 
 extern "C"
@@ -56,7 +57,7 @@ extern "C"
 JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Init(JNIEnv *ioEnv, jobject ioThis, jstring gifName,
                                                              jint w, jint h, jint numColors, jint quality, jint frameDelay);
 JNIEXPORT void JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Close(JNIEnv *ioEnv, jobject ioThis);
-JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_AddFrame(JNIEnv *ioEnv, jobject ioThis, jintArray inArray);
+JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_AddFrame(JNIEnv *ioEnv, jobject ioThis, jintArray inArray, jboolean isFirst);
 };
 
 
@@ -116,12 +117,13 @@ JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Init(JNIEnv 
 	__android_log_write(ANDROID_LOG_VERBOSE, "gifflen","Allocating memory for output DIB");
 	outDIB = new DIB(imgw, imgh, 8);
 	outDIB->palette = new unsigned char[768];
+	outDIB->usedEntry = new bool[256];
 
 	neuQuant = new NeuQuant();
 
 	// Output the GIF header and Netscape extension
 	fwrite("GIF89a", 1, 6, pGif);
-	s[0] = w & 0xFF; s[1] = w / 0x100;
+	/*s[0] = w & 0xFF; s[1] = w / 0x100;
 	s[2] = h & 0xFF; s[3] = h / 0x100;
 	s[4] = 0x50 + max_bits(numColors) - 1;
 	s[5] = s[6] = 0;
@@ -129,7 +131,7 @@ JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Init(JNIEnv 
 	fwrite(s, 1, 10, pGif);
 	fwrite("NETSCAPE2.0", 1, 11, pGif);
 	s[0] = 3; s[1] = 1; s[2] = s[3] = s[4] = 0;
-	fwrite(s, 1, 5, pGif);
+	fwrite(s, 1, 5, pGif);*/
 
 	return 0;
 }
@@ -145,6 +147,7 @@ JNIEXPORT void JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Close(JNIEnv
 	if (outDIB)
 	{
 		if (outDIB->palette) delete [] outDIB->palette;
+		if (outDIB->usedEntry) delete [] outDIB->usedEntry;
 		delete outDIB;
 		outDIB = NULL;
 	}
@@ -162,27 +165,116 @@ JNIEXPORT void JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Close(JNIEnv
 }
 
 
+unsigned char findTransparentColorIndex(DIB *dstimg, short length) 
+{
+        unsigned char minpos = 0;
+        int dmin = 256 * 256 * 256;
+        for (int i = 0; i < length;) {
 
-JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_AddFrame(JNIEnv *ioEnv, jobject ioThis, jintArray inArray)
+			int dr =(dstimg->palette[i++] & 0xff);
+            int dg =(dstimg->palette[i++] & 0xff);
+            int db =(dstimg->palette[i] & 0xff);
+            int d = dr * dr + dg * dg + db * db;
+            int index = i / 3;
+            if (dstimg->usedEntry[index] && d < dmin) {
+                dmin = d;
+                minpos = index;
+            }
+            i++;
+        }
+        return minpos;
+}
+
+
+JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_AddFrame(JNIEnv *ioEnv, jobject ioThis, jintArray inArray, jboolean isFirst)
 {
 	ioEnv->GetIntArrayRegion(inArray, (jint)0, (jint)(inDIB.width * inDIB.height), (jint*)(inDIB.bits));
-
-	s[0] = '!'; s[1] = 0xF9; s[2] = 4;
-	s[3] = 0; s[4] = optDelay & 0xFF; s[5] = optDelay / 0x100; s[6] = s[7] = 0;
-	s[8] = ','; s[9] = s[10] = s[11] = s[12] = 0; s[13] = imgw & 0xFF; s[14] = imgw / 0x100;
-	s[15] = imgh & 0xFF; s[16] = imgh / 0x100;
-	s[17] = 0x80 + max_bits(optCol) - 1;
-
-	fwrite(s, 1, 18, pGif);
 
 	__android_log_write(ANDROID_LOG_VERBOSE, "gifflen","Quantising");
 
 	neuQuant->quantise(outDIB, &inDIB, optCol, optQuality, 0);
 
-	fwrite(outDIB->palette, 1, optCol * 3, pGif);
+		unsigned char transparentIdex = 0;
+	
+	unsigned char disp = 0;
+	
+	unsigned char transp = 0; 
+	
+	if(hasAlpha)
+	{
+														  //transparent color
+		transparentIdex = findTransparentColorIndex(outDIB, optCol * 3);
+		
+		disp = 0x02 & 0x07; // user override
+		
+		transp = 0x01;
+	}
 
-	__android_log_write(ANDROID_LOG_VERBOSE, "gifflen","Doing GIF encoding");
+	disp <<= 2;
+	
+	if(isFirst){
+	//write LSD
+		s[0] = imgw & 0xFF; s[1] = imgw / 0x100;
+		s[2] = imgh & 0xFF; s[3] = imgh / 0x100;
+		s[4] = (0x80 | // 1 : global color table flag = 1 (gct used)
+                0x70 | // 2-4 : color resolution = 7
+                0x00 | // 5 : gct sort flag = 0
+                (max_bits(optCol) - 1)); // 6-8 : gct size
+		s[5] = s[6] = 0;
+		fwrite(s, 1, 7, pGif);
+		
+		//write palette
+		fwrite(outDIB->palette, 1, optCol * 3, pGif);
+		
+		//write netscapeExt
+		s[0] = 0x21; s[1] = 0xFF; s[2] = 0x0B;
+		fwrite(s, 1, 3, pGif);
+		fwrite("NETSCAPE2.0", 1, 11, pGif);
+		s[0] = 3; s[1] = 1; s[2] = s[3] = s[4] = 0;
+		fwrite(s, 1, 5, pGif);
+		
+		//write GraphicCtrlExt
+		s[0] = '!'; s[1] = 0xF9; s[2] = 4;
+		s[3] = 0x0 | disp | 0x0 | transp;
+		s[4] = optDelay & 0xFF; s[5] = optDelay / 0x100;
+		s[6] = transparentIdex;
+		s[7] = 0;
+		fwrite(s, 1, 8, pGif);
+		
+		//write Image Desc
+		s[0] = ','; s[1] = s[2] = s[3] = s[4] = 0;
+		s[5] = imgw & 0xFF; s[6] = imgw / 0x100;
+		s[7] = imgh & 0xFF; s[8] = imgh / 0x100;
+		s[9] = 0;
+		fwrite(s, 1, 10, pGif);
+	
+	}else{
+		//write GraphicCtrlExt
+		s[0] = '!'; s[1] = 0xF9; s[2] = 4;
+		s[3] = 0 | disp | 0 | transp;
+		s[4] = optDelay & 0xFF; s[5] = optDelay / 0x100;
+		s[6] = transparentIdex;
+		s[7] = 0;
+		fwrite(s, 1, 8, pGif);
+		
+		//write Image Desc
+		s[0] = ','; s[1] = s[2] = s[3] = s[4] = 0;
+		s[5] = imgw & 0xFF; s[6] = imgw / 0x100;
+		s[7] = imgh & 0xFF; s[8] = imgh / 0x100;
+		s[9] =(0x80 | // 1 local color table 1=yes
+                  0 | // 2 interlace - 0=no
+                  0 | // 3 sorted - 0=no
+                  0 | // 4-5 reserved
+                 (max_bits(optCol) - 1)); // 6-8 size of color table
+		fwrite(s, 1, 10, pGif);
+		
+		fwrite(outDIB->palette, 1, optCol * 3, pGif);
+	
+	}
+	
 	GIF_LZW_compressor(outDIB, optCol, pGif, 0);
+
+	
 
 	return 0;
 }
@@ -437,6 +529,8 @@ void NeuQuant::quantise(DIB *destimage, DIB *srcimage, int numColors, int qualit
   unbiasnet();
   for (i=0; i<numColors; i++)
   {
+	destimage->usedEntry[i] = false;
+	  
     for (j=0; j<3; j++)
     {
       destimage->palette[i*3 + j] = network[i][2-j];
@@ -450,30 +544,50 @@ void NeuQuant::quantise(DIB *destimage, DIB *srcimage, int numColors, int qualit
   }
 
   //printf("NeuQuant: Mapping colors.\n");
-
+  
+   int idx = 0;
+  
+  int alphaCount = 0;
+  
   for (i=srcimage->height-1; i>=0; i--)
   {
     if (i&1)
       for (j=srcimage->width-1; j>=0; j--)
       {
-        destimage->bits[i*srcimage->width + j] = inxsearch(srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE],
+		  
+		idx = inxsearch(srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE],
                                                                                 srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE + 1],
                                                                                 srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE + 2],
                                                                                 dither,
                                                                                 j,
                                                                                 i);
+        destimage->bits[i*srcimage->width + j] = idx;
+		destimage->usedEntry[idx] = true;
+		if(srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE + 3] == 0x00)
+		{
+			alphaCount++;
+		}
       }
     else
       for (j=0; j<srcimage->width; j++)
       {
-        destimage->bits[i*srcimage->width + j] = inxsearch(srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE],
+		
+		idx = inxsearch(srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE],
                                                                                 srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE + 1],
                                                                                 srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE + 2],
                                                                                 dither,
                                                                                 j,
                                                                                 i);
+        destimage->bits[i*srcimage->width + j] = idx;
+		destimage->usedEntry[idx] = true;
+		if(srcimage->bits[i*srcimage->width*PIXEL_SIZE + j*PIXEL_SIZE + 3] == 0x00)
+		{
+			alphaCount++;
+		}
       }
   }
+  
+  hasAlpha = (alphaCount/(float)(imgw*imgh)) > 0.04F ? true : false;
 
 }
 
