@@ -53,10 +53,10 @@ FILE *pGif = NULL;
 
 extern "C"
 {
-JNIEXPORT jint JNICALL Java_org_jiggawatt_giffle_Giffle_Init(JNIEnv *ioEnv, jobject ioThis, jstring gifName,
+JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Init(JNIEnv *ioEnv, jobject ioThis, jstring gifName,
                                                              jint w, jint h, jint numColors, jint quality, jint frameDelay);
-JNIEXPORT void JNICALL Java_org_jiggawatt_giffle_Giffle_Close(JNIEnv *ioEnv, jobject ioThis);
-JNIEXPORT jint JNICALL Java_org_jiggawatt_giffle_Giffle_AddFrame(JNIEnv *ioEnv, jobject ioThis, jintArray inArray);
+JNIEXPORT void JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_Close(JNIEnv *ioEnv, jobject ioThis);
+JNIEXPORT jint JNICALL Java_gifencoder_nakhon_com_gifencoder_Giffle_AddFrame(JNIEnv *ioEnv, jobject ioThis, jintArray inArray);
 };
 
 

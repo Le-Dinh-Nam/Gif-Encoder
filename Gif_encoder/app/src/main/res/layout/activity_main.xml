@@ -5,7 +5,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="gifencoder.nakhon.com.gif_encoder.MainActivity">
+    tools:context="gifencoder.nakhon.com.gif_encoder.gifencoder.nakhon.com.gifencoder.MainActivity">
 
     <TextView
         android:id="@+id/sample_text"

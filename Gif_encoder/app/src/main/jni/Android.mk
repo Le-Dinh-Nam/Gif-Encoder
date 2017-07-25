@@ -18,5 +18,5 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := gifflen
 LOCAL_SRC_FILES := gifflen.cpp
-LOCAL_LDLIBS := -L/cygdrive/c/android-ndk-1.5_r1-windows/android-ndk-1.5_r1/build/platforms/android-1.5/arch-arm/usr/lib -llog
+LOCAL_LDLIBS := -llog
 include $(BUILD_SHARED_LIBRARY)
