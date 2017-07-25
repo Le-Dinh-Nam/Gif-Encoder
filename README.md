@@ -36,7 +36,7 @@ The Java code to use the library would be something like:
     bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
 
     // Convert to 256 colors and add to foo.gif
-    AddFrame(pixels);
+    AddFrame(pixels, isFirst);
 
     Close();
 
